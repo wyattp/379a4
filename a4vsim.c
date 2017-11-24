@@ -1,3 +1,13 @@
+/*
+ * CMPUT 379 - Assignment 4
+ * Virtual Memory Simulator
+ *
+ * Auth:    Wyatt Praharenka
+ * CCID:    praharen
+ * SID:     1481322
+ *
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -56,12 +66,22 @@ struct vm_stats {
 };
 
 /*
+ * reference history for last 3 accesses
+ */
+struct hist {
+    int     p1;         /* 'page1' */
+    int     p2;
+    int     p3;
+};
+
+/*
  * functions
  */
 void    read_page (int page);
 void    write_page (int page);
 double  pr_time (clock_t real);
 void    insert_page (int pos, int page, int last_use);
+void    hist_push (int page, struct hist *h);
 
 /* replacement straegies */
 struct frame * search_mem (int page); 
@@ -83,6 +103,7 @@ struct frame *  page_frames;
 struct ref      reference;
 
 struct vm_stats stats = {0};
+struct hist     ref_hist;
 
 struct frame * (*replace)(int);
 
@@ -98,6 +119,9 @@ int
 main (int argc, char *argv[]) {
     int err;
     char *strat;
+
+    /* init random */
+    srand (time (NULL));
 
     /*
      * params
@@ -205,6 +229,7 @@ void
 read_page (int page) {
     struct frame *fr;
 
+    hist_push (page, &ref_hist);
     fr = search_mem(page);
 
     if (fr == NULL) {
@@ -225,6 +250,7 @@ void
 write_page (int page) {
     struct frame *fr;
     
+    hist_push (page, &ref_hist);
     fr = search_mem(page);
 
     if (fr == NULL) {
@@ -278,7 +304,15 @@ none_replacement (int page) {
 
 struct frame *
 mrand_replacement (int page) {
+    int             pos;
 
+    while ((pos = rand()%npages) == ref_hist.p1
+            || pos == ref_hist.p2
+            || pos == ref_hist.p3);
+
+    insert_page (pos, page, ref_num); 
+    
+    return &page_frames[pos];
 }
 
 /*
@@ -347,6 +381,15 @@ insert_page (int pos, int page, int last_use) {
     page_frames[pos].dirty = 0;
     page_frames[pos].last_use = last_use;
     page_frames[pos].ref = 0;
+
+}
+
+void
+hist_push (int page, struct hist *h) {
+    
+    h->p3   = h->p2;
+    h->p2   = h->p1;
+    h->p1   = page;
 
 }
 
