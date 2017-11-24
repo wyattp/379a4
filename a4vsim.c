@@ -88,8 +88,10 @@ struct frame * (*replace)(int);
 
 void
 usage (void) {
-    printf ("./a4vsim pagesize memsize strategy\n"
-            "Pagesize is between 256 and 8192\n");
+    printf ("Usage:\t./a4vsim pagesize memsize strategy\n"
+            "\n"
+            "\tPagesize is between 256 and 8192\n"
+            "\tStrategy is one of 'none', 'mrand', 'lru', 'sec'\n");
 }
 
 int
@@ -137,7 +139,8 @@ main (int argc, char *argv[]) {
     /*
      * start sim
      */
-    printf ("a4vsim [page= %d, mem= %d, %s, page num= %d]\n", pagesize, memsize, strat, npages);
+    printf ("a4vsim [page= %d, mem= %d, %s, page num= %d]\n"
+            , pagesize, memsize, strat, npages);
 
     page_frames = malloc ((npages) * sizeof (struct frame));
     ref_num = 0;
@@ -167,14 +170,20 @@ main (int argc, char *argv[]) {
             read_page (reference.pg);
             break;
 
+        default:
+            fprintf (stderr, "[%s] Error: Illegal opcode, received %d\n"
+                    ,PROG_NAME, reference.op);
+
         }
         ref_num++;
 
     }
     stats.end = clock();
 
-    printf ("[%s] %d references processed using '%s' in %.2f sec.\n", PROG_NAME, ref_num, strat, pr_time(stats.end-stats.start));
-    printf ("[%s] page faults= %d, write count= %d, flushes= %d\n", PROG_NAME, stats.faults, stats.writes, stats.flushes);
+    printf ("[%s] %d references processed using '%s' in %.2f sec.\n"
+            , PROG_NAME, ref_num, strat, pr_time(stats.end-stats.start));
+    printf ("[%s] page faults= %d, write count= %d, flushes= %d\n"
+            , PROG_NAME, stats.faults, stats.writes, stats.flushes);
     printf ("[%s] Accumulator= %d\n", PROG_NAME, stats.accum);
 
     /* int i;
@@ -255,16 +264,16 @@ search_mem (int page) {
 
 struct frame *
 none_replacement (int page) {
-    int i = 0;
+    static  int i = 0;
 
-    while (page_frames[i].pg > 0) { i++; }
+    if (i >= npages) {
+        npages += 1000;
+        page_frames = realloc (page_frames, (npages)*sizeof (struct frame));
+    }
 
-    page_frames[i].pg = page;
-    page_frames[i].used = 1;
-    page_frames[i].dirty = 0;
-    page_frames[i].last_use = ref_num;
+    insert_page (i, page, ref_num);
 
-    return &page_frames[i];
+    return &page_frames[i++];
 }
 
 struct frame *
