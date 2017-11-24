@@ -148,10 +148,12 @@ main (int argc, char *argv[]) {
         switch (reference.op) {
 
         case OP_INC:
+            read_page (reference.pg);
             stats.accum += reference.val;
             break;
 
         case OP_DEC:
+            read_page (reference.pg);
             stats.accum -= reference.val;
             break;
             
