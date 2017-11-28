@@ -76,19 +76,19 @@ struct hist {
 /*
  * functions
  */
-void    read_page (int page);
-void    write_page (int page);
+void    read_page (unsigned int page);
+void    write_page (unsigned int page);
 double  pr_time (clock_t real);
-void    insert_page (int pos, int page, int last_use);
-void    hist_push (int page, struct hist *h);
+void    insert_page (int pos, unsigned int page, int last_use);
+void    hist_push (unsigned int page, struct hist *h);
 int		logt (int num);
 
 /* replacement straegies */
-struct frame * search_mem (int page); 
-struct frame * none_replacement (int page);
-struct frame * mrand_replacement (int page);
-struct frame * lru_replacement (int page);
-struct frame * sec_replacement (int page);
+struct frame * search_mem (unsigned int page); 
+struct frame * none_replacement (unsigned int page);
+struct frame * mrand_replacement (unsigned int page);
+struct frame * lru_replacement (unsigned int page);
+struct frame * sec_replacement (unsigned int page);
 
 /*
  * global vars
@@ -105,7 +105,7 @@ struct ref      reference;
 struct vm_stats stats = {0};
 struct hist     ref_hist;
 
-struct frame * (*replace)(int);
+struct frame * (*replace)(unsigned int);
 
 void
 usage (void) {
@@ -234,7 +234,7 @@ main (int argc, char *argv[]) {
  * the replacement algorithm
  */
 void
-read_page (int page) {
+read_page (unsigned int page) {
     struct frame *fr;
 
     hist_push (page, &ref_hist);
@@ -255,7 +255,7 @@ read_page (int page) {
  * the replacement algorithm then write to the page
  */
 void
-write_page (int page) {
+write_page (unsigned int page) {
     struct frame *fr;
     
     hist_push (page, &ref_hist);
@@ -279,7 +279,7 @@ write_page (int page) {
  * a pointer to the current frame in memory
  */
 struct frame *
-search_mem (int page) {
+search_mem (unsigned int page) {
     int i;
 
     for (i = 0; i < npages; i++) {
@@ -297,7 +297,7 @@ search_mem (int page) {
  */
 
 struct frame *
-none_replacement (int page) {
+none_replacement (unsigned int page) {
     static  int i = 0;
 
     if (i >= npages) {
@@ -311,7 +311,7 @@ none_replacement (int page) {
 }
 
 struct frame *
-mrand_replacement (int page) {
+mrand_replacement (unsigned int page) {
     int             pos;
 
     while ((pos = rand()%npages) == ref_hist.p1
@@ -327,7 +327,7 @@ mrand_replacement (int page) {
  * least recently used page replacement
  */
 struct frame *
-lru_replacement (int page) {
+lru_replacement (unsigned int page) {
     int i, ref_min = -1, ref_min_index;
 
     for (i = 0; i < npages && page_frames[i].used > 0; i++) {
@@ -353,7 +353,7 @@ lru_replacement (int page) {
  * second chance replacement
  */
 struct frame *
-sec_replacement (int page) {
+sec_replacement (unsigned int page) {
     static int  pos = 0;
     static int  full = 0;
 
@@ -382,7 +382,7 @@ sec_replacement (int page) {
 }
 
 void
-insert_page (int pos, int page, int last_use) {
+insert_page (int pos, unsigned int page, int last_use) {
 
     page_frames[pos].pg = page;
     page_frames[pos].used = 1;
@@ -393,7 +393,7 @@ insert_page (int pos, int page, int last_use) {
 }
 
 void
-hist_push (int page, struct hist *h) {
+hist_push (unsigned int page, struct hist *h) {
     
     h->p3   = h->p2;
     h->p2   = h->p1;
