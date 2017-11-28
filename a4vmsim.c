@@ -68,9 +68,9 @@ struct vm_stats {
  * reference history for last 3 accesses
  */
 struct hist {
-    int     p1;         /* 'page1' */
-    int     p2;
-    int     p3;
+    unsigned int     p1;         /* 'page1' */
+    unsigned int     p2;
+    unsigned int     p3;
 };
 
 /*
@@ -318,6 +318,9 @@ mrand_replacement (unsigned int page) {
             || pos == ref_hist.p2
             || pos == ref_hist.p3);
 
+	if (page_frames[pos].dirty)
+		stats.flushes++;
+
     insert_page (pos, page, ref_num); 
     
     return &page_frames[pos];
@@ -394,7 +397,14 @@ insert_page (int pos, unsigned int page, int last_use) {
 
 void
 hist_push (unsigned int page, struct hist *h) {
-    
+
+	/* optional: now adds only if not already in
+	if (page == h->p1 ||
+		page == h->p2 ||
+		page == h->p3)
+		return;
+	*/
+
     h->p3   = h->p2;
     h->p2   = h->p1;
     h->p1   = page;
