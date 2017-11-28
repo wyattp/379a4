@@ -38,8 +38,7 @@
 struct ref {
     unsigned int    val:    6;
     unsigned int    op :    2;
-    unsigned int    unused : 2;
-    unsigned int    pg :    22;
+    unsigned int    pg :    24;
 };
 
 /*
@@ -82,6 +81,7 @@ void    write_page (int page);
 double  pr_time (clock_t real);
 void    insert_page (int pos, int page, int last_use);
 void    hist_push (int page, struct hist *h);
+int		logt (int num);
 
 /* replacement straegies */
 struct frame * search_mem (int page); 
@@ -117,7 +117,7 @@ usage (void) {
 
 int
 main (int argc, char *argv[]) {
-    int err;
+    int err, page_mask;
     char *strat;
 
     /* init random */
@@ -139,6 +139,13 @@ main (int argc, char *argv[]) {
         printf ("Value of pagesize needs to be between 256 and 8192 bytes\n");
         return -1;
     }
+
+	/* build page mask */
+	if ((page_mask = logt (pagesize)) < 0) {
+		printf ("Please ensure the pagesize is a power of two\n");
+		return -1;
+	}
+	page_mask = ((1 << 23) - 1) ^ ((1 << (24-(32-page_mask))) -1);
 
     npages = (memsize/pagesize + (memsize % pagesize != 0));
     memsize = npages * pagesize;
@@ -171,6 +178,7 @@ main (int argc, char *argv[]) {
 
     stats.start = clock();
     while (read (STDIN_FILENO, &reference, 8) > 0) {
+		reference.pg &= page_mask;
 
         switch (reference.op) {
 
@@ -396,4 +404,20 @@ hist_push (int page, struct hist *h) {
 double
 pr_time (clock_t real) {
     return real / (double) CLOCKS_PER_SEC;
+}
+
+/*
+ * Must be a power of two
+ */
+int
+logt (int num) {
+	int comp, i;
+
+	for (i=0,comp=1; i < 32; i++) {
+		if (comp == num)
+			return i;
+		comp = comp << 1;
+	}
+
+	return -1;
 }
