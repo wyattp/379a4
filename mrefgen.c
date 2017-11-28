@@ -6,8 +6,12 @@
  #
  #  Remark: To see the generated 32-bit binary words as 4 hex digits
  #	    per line using 'od', use
- #          "od -Ad -x -w4 -v filename".
+ #          "od -Ad -w4 -x -v filename".
  #          (Note, however, the byte order when interpreting the output.)
+ #
+ #	    [Nov. 2017] This line displays a 32-bit integer/line:
+ #	    "od -Ad -w4 --format=x4 -v filename"
+ #
  #
  #  Disclaimer: This program is very naive. It does not purport to be
  #  a realistic model of anything.
@@ -29,8 +33,8 @@
 #define BUFSIZE 16384
 #define	NBASE 1024
 
-typedef	unsigned long long counter;
-typedef	unsigned long address;
+typedef	unsigned int   address;		// 4 bytes
+typedef	unsigned long  counter;		// 8 bytes
 
 
 extern char *optarg;                    // Required by getopt
@@ -58,7 +62,7 @@ counter numb_local;
 
 double	prob_focus;
 
-// Accumulator related varibles
+// Accumulator related variables
 //
 enum {OP_INC= 0x00, OP_DEC= 0x40, OP_WR= 0x80, OP_RD= 0xc0 };
 #define MAX_INCVAL  63
@@ -114,7 +118,7 @@ void resetlocal () {
 		cent_local = maxaddr - 1;
 	numb_local = 16 +
 		(counter) ((double)NBASE * (1 << locality) * drand48 ());
-	// fprintf (stderr, "%llu %u %u\n", numb_local, cent_local, dist_local);
+	// fprintf (stderr, "%lu %u %u\n", numb_local, cent_local, dist_local);
 }
 
 address genref () {
@@ -173,7 +177,7 @@ void badusage () {
 
     fprintf (stderr,
         "Usage:\t mrefgen -m memsize -l [0-9] -f [0-9] -w <0-1> -n nref\n");
-    fprintf (stderr,"\t (maxaddr= %lu, locality= %d, focus= %d, wratio= %f, nref= %llu)\n", maxaddr, locality, focus, writper, nref);	
+    fprintf (stderr,"\t (maxaddr= %u, locality= %d, focus= %d, wratio= %f, nref= %lu)\n", maxaddr, locality, focus, writper, nref);	
 
     exit (99);
 }
@@ -183,7 +187,7 @@ address getint32 () {
 	address v;
 	int s;
 
-	if (sscanf (optarg, "%lu%n", &v, &s) < 1 || s < strlen (optarg))
+	if (sscanf (optarg, "%u%n", &v, &s) < 1 || s < strlen (optarg))
 		badusage ();
 
 	return v;
@@ -194,7 +198,7 @@ counter getint64 () {
 	counter v;
 	int s;
 
-	if (sscanf (optarg, "%llu%n", &v, &s) < 1 || s < strlen (optarg))
+	if (sscanf (optarg, "%lu%n", &v, &s) < 1 || s < strlen (optarg))
 		badusage ();
 
 	return v;
@@ -257,7 +261,7 @@ int main (int argc, char *argv []) {
 	initgen ();
 	generate ();
 
-	fprintf (stderr, "[%s] %llu references generated, write count= %llu\n",
+	fprintf (stderr, "[%s] %lu references generated, write count= %lu\n",
 			  argv[0], refCount, writeCount);
 	fprintf (stderr, "[%s] Accumulator final value= %d \n",
 			  argv[0], acc_netVal);
