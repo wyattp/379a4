@@ -28,7 +28,7 @@
 #define OP_RD   3
 
 #define HASH_SIZE	10000
-#define HASH_LEN	100
+#define HASH_LEN	50
 
 #define TEST_NPAGES 20
 #define PROG_NAME "avm4sim"
@@ -74,11 +74,6 @@ struct hist {
     unsigned int     p3;
 };
 
-struct hash_arr {
-	unsigned int		length;
-	struct hash_entry	*arr;
-};
-
 struct hash_entry {
 	unsigned int	page;
 	unsigned int	frame_num;
@@ -112,7 +107,7 @@ int ref_num;
 
 struct frame *  page_frames;
 struct ref      reference;
-struct hash_arr	page_hash[HASH_SIZE];
+struct hash_entry	page_hash[HASH_SIZE][HASH_LEN];
 
 struct vm_stats stats = {0};
 struct hist     ref_hist;
@@ -294,13 +289,14 @@ write_page (unsigned int page) {
 struct frame *
 search_mem (unsigned int page) {
     int i;
-	struct hash_arr	*harr;
 
-	harr = &page_hash[page % HASH_SIZE];
-
-	for (i = 0; harr != NULL && i < harr->length && harr->arr[i].page > 0; i++) {
-		if (harr->arr[i].page == page)
-			return &page_frames[harr->arr[i].frame_num];
+	for (i = 0; i < HASH_LEN; i++) {
+		if (page_hash[page % HASH_SIZE][i].page == page) {
+			if (page_frames[page_hash[page % HASH_SIZE][i].frame_num].pg == page)
+				return &page_frames[page_hash[page % HASH_SIZE][i].frame_num];
+			else
+				return NULL;
+		}
 	}
 
 	return NULL;
@@ -409,26 +405,14 @@ sec_replacement (unsigned int page) {
 
 void
 insert_page (int pos, unsigned int page, int last_use) {
-	struct hash_arr	*harr;
 	int				i;
 
-	/* check hash table for page */
-	harr = &page_hash[pos % HASH_SIZE];
-	if (harr->arr == NULL) {
-		harr->arr = malloc (sizeof (struct hash_entry) * HASH_LEN);
-		harr->length = HASH_LEN;
-	}
-	
-	for (i = 0; harr->arr[i].page != page && harr->arr[i].page > 0; i++) {
-		if (i+1 >= harr->length) {
-			harr->length += HASH_LEN;
-			harr->arr = realloc (harr->arr, \
-					sizeof (struct hash_entry) * harr->length);
-		}
-	}
+	/* insert to hash table */
+	for (i = 0; page_hash[page % HASH_SIZE][i].page > 0 
+		&& page_hash[page % HASH_SIZE][i].page != page; i++);
 
-	harr->arr[i].page = page;
-	harr->arr[i].frame_num = pos;
+	page_hash[page % HASH_SIZE][i].page = page;
+	page_hash[page % HASH_SIZE][i].frame_num = pos;
 
     page_frames[pos].pg = page;
     page_frames[pos].used = 1;
