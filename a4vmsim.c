@@ -19,8 +19,6 @@
 #include <time.h>
 #include <fcntl.h>
 
-#define PRINT(str) printf ("%s\n", str)
-
 /* 
  * reference string operations
  */
@@ -29,8 +27,11 @@
 #define OP_WR   2
 #define OP_RD   3
 
+#define HASH_SIZE	10000
+#define HASH_LEN	100
+
 #define TEST_NPAGES 20
-#define PROG_NAME "av4sim"
+#define PROG_NAME "avm4sim"
 
 /*
  * reference string bitfield
@@ -73,6 +74,16 @@ struct hist {
     unsigned int     p3;
 };
 
+struct hash_arr {
+	unsigned int		length;
+	struct hash_entry	*arr;
+};
+
+struct hash_entry {
+	unsigned int	page;
+	unsigned int	frame_num;
+};
+
 /*
  * functions
  */
@@ -101,6 +112,7 @@ int ref_num;
 
 struct frame *  page_frames;
 struct ref      reference;
+struct hash_arr	page_hash[HASH_SIZE];
 
 struct vm_stats stats = {0};
 struct hist     ref_hist;
@@ -177,7 +189,8 @@ main (int argc, char *argv[]) {
     ref_num = 0;
 
     stats.start = clock();
-    while (read (STDIN_FILENO, &reference, 8) > 0) {
+    while (read (STDIN_FILENO, &reference, 4) > 0) {
+
 		reference.pg &= page_mask;
 
         switch (reference.op) {
@@ -281,6 +294,16 @@ write_page (unsigned int page) {
 struct frame *
 search_mem (unsigned int page) {
     int i;
+	struct hash_arr	*harr;
+
+	harr = &page_hash[page % HASH_SIZE];
+
+	for (i = 0; harr != NULL && i < harr->length && harr->arr[i].page > 0; i++) {
+		if (harr->arr[i].page == page)
+			return &page_frames[harr->arr[i].frame_num];
+	}
+
+	return NULL;
 
     for (i = 0; i < npages; i++) {
         
@@ -386,6 +409,26 @@ sec_replacement (unsigned int page) {
 
 void
 insert_page (int pos, unsigned int page, int last_use) {
+	struct hash_arr	*harr;
+	int				i;
+
+	/* check hash table for page */
+	harr = &page_hash[pos % HASH_SIZE];
+	if (harr->arr == NULL) {
+		harr->arr = malloc (sizeof (struct hash_entry) * HASH_LEN);
+		harr->length = HASH_LEN;
+	}
+	
+	for (i = 0; harr->arr[i].page != page && harr->arr[i].page > 0; i++) {
+		if (i+1 >= harr->length) {
+			harr->length += HASH_LEN;
+			harr->arr = realloc (harr->arr, \
+					sizeof (struct hash_entry) * harr->length);
+		}
+	}
+
+	harr->arr[i].page = page;
+	harr->arr[i].frame_num = pos;
 
     page_frames[pos].pg = page;
     page_frames[pos].used = 1;
