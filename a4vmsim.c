@@ -27,8 +27,8 @@
 #define OP_WR   2
 #define OP_RD   3
 
-#define HASH_SIZE	10000
-#define HASH_LEN	50
+#define HASH_SIZE	1000
+#define HASH_LEN	100
 
 #define TEST_NPAGES 20
 #define PROG_NAME "avm4sim"
@@ -201,7 +201,6 @@ main (int argc, char *argv[]) {
             break;
             
         case OP_WR:
-            //printf ("%d\n",reference.pg);
             write_page (reference.pg);
             stats.writes += 1;
             break;
@@ -226,11 +225,6 @@ main (int argc, char *argv[]) {
             , PROG_NAME, stats.faults, stats.writes, stats.flushes);
     printf ("[%s] Accumulator= %d\n", PROG_NAME, stats.accum);
 
-    /* int i;
-    for (i = 0; i < npages; i++) {
-        printf ("%d\n", page_frames[i].pg);
-    } */
-    
     free (page_frames);
 
     return 0;
@@ -289,26 +283,25 @@ write_page (unsigned int page) {
 struct frame *
 search_mem (unsigned int page) {
     int i;
+    struct hash_entry   *hash_ent;
 
 	for (i = 0; i < HASH_LEN; i++) {
-		if (page_hash[page % HASH_SIZE][i].page == page) {
-			if (page_frames[page_hash[page % HASH_SIZE][i].frame_num].pg == page)
-				return &page_frames[page_hash[page % HASH_SIZE][i].frame_num];
+        hash_ent = &page_hash[page % HASH_SIZE][i];
+
+        if (hash_ent->page < 1)
+            return NULL;
+
+		if (hash_ent->page == page) {
+
+			if (page_frames[hash_ent->frame_num].pg == page)
+				return &page_frames[hash_ent->frame_num];
 			else
 				return NULL;
+
 		}
 	}
 
 	return NULL;
-
-    for (i = 0; i < npages; i++) {
-        
-        if (page_frames[i].pg == page)
-            return &page_frames[i];
-
-    }
-
-    return NULL;
 }
 
 /*
@@ -408,8 +401,11 @@ insert_page (int pos, unsigned int page, int last_use) {
 	int				i;
 
 	/* insert to hash table */
-	for (i = 0; page_hash[page % HASH_SIZE][i].page > 0 
+	for (i = 0; i < HASH_LEN
+        && page_hash[page % HASH_SIZE][i].page > 0 
 		&& page_hash[page % HASH_SIZE][i].page != page; i++);
+
+    printf ("%d\n", i);
 
 	page_hash[page % HASH_SIZE][i].page = page;
 	page_hash[page % HASH_SIZE][i].frame_num = pos;
@@ -422,20 +418,14 @@ insert_page (int pos, unsigned int page, int last_use) {
 
 }
 
+/*
+ * push page to history table
+ */
 void
 hist_push (unsigned int page, struct hist *h) {
-
-	/* optional: now adds only if not already in
-	if (page == h->p1 ||
-		page == h->p2 ||
-		page == h->p3)
-		return;
-	*/
-
     h->p3   = h->p2;
     h->p2   = h->p1;
     h->p1   = page;
-
 }
 
 double
