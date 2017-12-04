@@ -27,19 +27,31 @@
 #define OP_WR   2
 #define OP_RD   3
 
-#define HASH_SIZE	1000
-#define HASH_LEN	100
+/*
+ * bitfield definitions in # of bits
+ */
+#define VAL_BITS    6
+#define OP_BITS     2
+#define PG_BITS     23
 
-#define TEST_NPAGES 20
-#define PROG_NAME "avm4sim"
+/*
+ * size of hash table for none
+ * replacement. these numbers are
+ * absolute and should handle most
+ * inputs.
+ */
+#define HASH_SIZE	1000
+#define HASH_LEN	400
+
+#define PROG_NAME "a4vmsim"
 
 /*
  * reference string bitfield
  */
 struct ref {
-    unsigned int    val:    6;
-    unsigned int    op :    2;
-    unsigned int    pg :    24;
+    unsigned int    val:    VAL_BITS;
+    unsigned int    op :    OP_BITS;
+    unsigned int    pg :    PG_BITS;
 };
 
 /*
@@ -167,10 +179,8 @@ main (int argc, char *argv[]) {
     memsize = npages * pagesize;
 
     /* set replacement strategy */
-    if ((err = !strcmp ("none", strat))) {
-        npages = TEST_NPAGES;
+    if ((err = !strcmp ("none", strat)))
         replace = &none_replacement;
-    }
     if (!err && (err = !strcmp ("mrand", strat)))
         replace = &mrand_replacement;
     if (!err && (err = !strcmp ("lru", strat)))
