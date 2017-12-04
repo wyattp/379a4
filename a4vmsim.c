@@ -122,6 +122,15 @@ usage (void) {
             "\tStrategy is one of 'none', 'mrand', 'lru', 'sec'\n");
 }
 
+void
+dprintff (struct ref *refr) {
+    printf ("REF NUM:   %d\n"
+            "PG:        %d\n"
+            "OP:        %d\n"
+            "VAL:       %d\n\n",
+            ref_num, refr->pg, refr->op, refr->val);
+}
+
 int
 main (int argc, char *argv[]) {
     int err, page_mask;
@@ -246,9 +255,10 @@ read_page (unsigned int page) {
         stats.faults++;
         fr = replace (page);
     }
+    else
+        fr->ref = 1;
 
     fr->last_use = ref_num;
-    fr->ref = 1;
 }
 
 /*
@@ -267,10 +277,11 @@ write_page (unsigned int page) {
         stats.faults++;
         fr = replace (page);
     }
+    else
+        fr->ref = 1;
 
     fr->last_use = ref_num;
     fr->dirty = 1;
-    fr->ref = 1;
 }
 
 /*
@@ -385,12 +396,9 @@ sec_replacement (unsigned int page) {
     /* add page */
     insert_page (pos, page, ref_num);
 
-    /* page table not full */
-    if (!full) {
-        if (++pos >= npages) {
-            pos = 0;
-            full = 1;
-        }
+    if (++pos >= npages) {
+        pos = 0;
+        full = 1;
     }
 
     return &page_frames[pos];
