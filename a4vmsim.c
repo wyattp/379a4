@@ -89,6 +89,7 @@ struct hist {
 struct hash_entry {
 	unsigned int	page;
 	unsigned int	frame_num;
+    unsigned int    used;       /* all will be 0 at first */
 };
 
 /*
@@ -309,7 +310,7 @@ search_mem (unsigned int page) {
 	for (i = 0; i < HASH_LEN; i++) {
         hash_ent = &page_hash[page % HASH_SIZE][i];
 
-        if (hash_ent->page < 1)
+        if (!hash_ent->used)
             return NULL;
 
 		if (hash_ent->page == page) {
@@ -392,6 +393,7 @@ struct frame *
 sec_replacement (unsigned int page) {
     static int  pos = 0;
     static int  full = 0;
+    int         ret_pos;
 
     /* page table full, go through reference bits */
     while (full && page_frames[pos].ref == 1) {
@@ -405,13 +407,14 @@ sec_replacement (unsigned int page) {
 
     /* add page */
     insert_page (pos, page, ref_num);
+    ret_pos = pos;
 
     if (++pos >= npages) {
         pos = 0;
         full = 1;
     }
 
-    return &page_frames[pos];
+    return &page_frames[ret_pos];
 }
 
 void
@@ -423,11 +426,12 @@ insert_page (int pos, unsigned int page, int last_use) {
 
 	/* insert to hash table */
 	for (i = 0; i < HASH_LEN
-        && page_hash[index][i].page > 0 
+        && page_hash[index][i].used == 1 
 		&& page_hash[index][i].page != page; i++);
 
 	page_hash[index][i].page = page;
 	page_hash[index][i].frame_num = pos;
+    page_hash[index][i].used = 1;
 
     page_frames[pos].pg = page;
     page_frames[pos].used = 1;
