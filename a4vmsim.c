@@ -399,16 +399,17 @@ sec_replacement (unsigned int page) {
 void
 insert_page (int pos, unsigned int page, int last_use) {
 	int				i;
+	unsigned int	index;
+
+	index = page % HASH_SIZE;
 
 	/* insert to hash table */
 	for (i = 0; i < HASH_LEN
-        && page_hash[page % HASH_SIZE][i].page > 0 
-		&& page_hash[page % HASH_SIZE][i].page != page; i++);
+        && page_hash[index][i].page > 0 
+		&& page_hash[index][i].page != page; i++);
 
-    printf ("%d\n", i);
-
-	page_hash[page % HASH_SIZE][i].page = page;
-	page_hash[page % HASH_SIZE][i].frame_num = pos;
+	page_hash[index][i].page = page;
+	page_hash[index][i].frame_num = pos;
 
     page_frames[pos].pg = page;
     page_frames[pos].used = 1;
