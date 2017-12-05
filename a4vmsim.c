@@ -32,7 +32,7 @@
  */
 #define VAL_BITS    6
 #define OP_BITS     2
-#define PG_BITS     23
+#define PG_BITS     24
 
 /*
  * size of hash table for none
@@ -146,7 +146,7 @@ dprintff (struct ref *refr) {
 
 int
 main (int argc, char *argv[]) {
-    int err, page_mask;
+    int err, page_shift;
     char *strat;
 
     /* init random */
@@ -170,11 +170,11 @@ main (int argc, char *argv[]) {
     }
 
 	/* build page mask */
-	if ((page_mask = logt (pagesize)) < 0) {
+	if ((logt (pagesize)) < 0) {
 		printf ("Please ensure the pagesize is a power of two\n");
 		return -1;
 	}
-	page_mask = ((1 << 23) - 1) ^ ((1 << (24-(32-page_mask))) -1);
+    page_shift = 24 - (32 - logt (pagesize));
 
     npages = (memsize/pagesize + (memsize % pagesize != 0));
     memsize = npages * pagesize;
@@ -206,7 +206,7 @@ main (int argc, char *argv[]) {
     stats.start = clock();
     while (read (STDIN_FILENO, &reference, 4) > 0) {
 
-		reference.pg &= page_mask;
+		reference.pg = reference.pg >> page_shift;
 
         switch (reference.op) {
 
