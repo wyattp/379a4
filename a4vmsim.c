@@ -90,6 +90,13 @@ struct hash_entry {
 	unsigned int	page;
 	unsigned int	frame_num;
     unsigned int    used;       /* all will be 0 at first */
+    unsigned int    term;
+};
+
+struct hash_arr {
+    int     n;
+    int     len;
+    struct hash_entry *arr;
 };
 
 /*
@@ -120,7 +127,9 @@ int ref_num;
 
 struct frame *  page_frames;
 struct ref      reference;
-struct hash_entry	page_hash[HASH_SIZE][HASH_LEN];
+//struct hash_entry	page_hash[HASH_SIZE][HASH_LEN];
+struct hash_arr     page_hash[HASH_SIZE];
+
 
 struct vm_stats stats = {0};
 struct hist     ref_hist;
@@ -146,8 +155,18 @@ dprintff (struct ref *refr) {
 
 int
 main (int argc, char *argv[]) {
-    int err, page_shift;
+    int err, page_shift, i;
     char *strat;
+
+
+    /*
+     * initalize hash table
+     */
+    for (i = 0; i < HASH_SIZE; i++) {
+        page_hash[i].arr = malloc (sizeof(struct hash_entry) * HASH_LEN);
+        page_hash[i].len = HASH_LEN;
+        page_hash[i].n = 0;
+    }
 
     /* init random */
     srand (time (NULL));
@@ -245,7 +264,13 @@ main (int argc, char *argv[]) {
             , PROG_NAME, stats.faults, stats.writes, stats.flushes);
     printf ("[%s] Accumulator= %d\n", PROG_NAME, stats.accum);
 
+    /*
+     * clean up
+     */
     free (page_frames);
+    
+    for (i = 0; i < HASH_SIZE; i++)
+        free(page_hash[i].arr);
 
     return 0;
 }
@@ -304,11 +329,12 @@ write_page (unsigned int page) {
  */
 struct frame *
 search_mem (unsigned int page) {
-    int i;
+    int i, hashn;
     struct hash_entry   *hash_ent;
 
-	for (i = 0; i < HASH_LEN; i++) {
-        hash_ent = &page_hash[page % HASH_SIZE][i];
+    hashn = page_hash[page % HASH_SIZE].n;
+	for (i = 0; i < hashn; i++) {
+        hash_ent = &page_hash[page % HASH_SIZE].arr[i];
 
         if (!hash_ent->used)
             return NULL;
@@ -419,19 +445,31 @@ sec_replacement (unsigned int page) {
 
 void
 insert_page (int pos, unsigned int page, int last_use) {
-	int				i;
+	int				i, hashn, hashlen;
 	unsigned int	index;
+    struct hash_entry *hash_ent;
 
 	index = page % HASH_SIZE;
+    hash_ent = page_hash[index].arr;
+    hashlen = page_hash[index].len;
+    hashn = page_hash[index].n;
 
 	/* insert to hash table */
-	for (i = 0; i < HASH_LEN
-        && page_hash[index][i].used == 1 
-		&& page_hash[index][i].page != page; i++);
+    for (i = 0; i < hashn && i < hashlen && hash_ent[i].page != page; i++);
 
-	page_hash[index][i].page = page;
-	page_hash[index][i].frame_num = pos;
-    page_hash[index][i].used = 1;
+    /* out of space */
+    if (i == hashlen) {
+        printf ("out of space\n");
+        page_hash[index].arr = realloc (page_hash[index].arr, 2*hashlen*sizeof (struct hash_entry));
+        page_hash[index].n = 2*hashlen;
+    }
+
+	page_hash[index].arr[i].page = page;
+	page_hash[index].arr[i].frame_num = pos;
+    page_hash[index].arr[i].used = 1;
+
+    if (i == hashn)
+        page_hash[index].n++; 
 
     page_frames[pos].pg = page;
     page_frames[pos].used = 1;
