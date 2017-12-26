@@ -1,10 +1,10 @@
 /*
- * CMPUT 379 - Assignment 4
+ * CMPUT xxx - Assignment x
  * Virtual Memory Simulator
  *
  * Auth:    Wyatt Praharenka
- * CCID:    praharen
- * SID:     1481322
+ * CCID:    
+ * SID:     
  *
  */
 
